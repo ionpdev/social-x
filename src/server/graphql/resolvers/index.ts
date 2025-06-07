@@ -1,6 +1,4 @@
-import { PrismaClient } from "../../db/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../db/client";
 
 export const resolvers = {
   Query: {
