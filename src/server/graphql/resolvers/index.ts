@@ -1,20 +1,43 @@
 import { prisma } from "../../db/client";
+import { hash } from "bcrypt";
 
 export const resolvers = {
   Query: {
     users: () => prisma.user.findMany({ include: { posts: true } }),
     posts: () => prisma.post.findMany({ include: { user: true } }),
-    // Implement 'me' using context.user if you wire up Auth/JWT
+    me: (_, __, context) => {
+      if (!context.user) return null;
+      return prisma.user.findUnique({
+        where: { id: context.user.id },
+        include: { posts: true },
+      });
+    },
   },
   Mutation: {
-    // Implement these for full functionality!
+    signup: async (_, { email, password, name }) => {
+      const hashedPassword = await hash(password, 10);
+      return prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name,
+        },
+      });
+    },
+    addPost: async (_, { content }, context) => {
+      if (!context.user) throw new Error("Not authenticated");
+      return prisma.post.create({
+        data: {
+          content,
+          userId: context.user.id,
+        },
+      });
+    },
   },
   User: {
-    posts: (parent: any) =>
-      prisma.post.findMany({ where: { userId: parent.id } }),
+    posts: (parent) => prisma.post.findMany({ where: { userId: parent.id } }),
   },
   Post: {
-    user: (parent: any) =>
-      prisma.user.findUnique({ where: { id: parent.userId } }),
+    user: (parent) => prisma.user.findUnique({ where: { id: parent.userId } }),
   },
 };
